@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { userId, productId, quantity = 1 } = body;
 
-    console.log('🛒 Purchase request:', { userId, productId, quantity });
+    console.log('Purchase request:', { userId, productId, quantity });
 
     if (!userId || !productId) {
       return NextResponse.json(
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
       _id: new ObjectId(productId)
     });
 
-    console.log('📦 Product found:', product?.name);
+    console.log('Product found:', product?.name);
 
     if (!product) {
       return NextResponse.json(
@@ -43,17 +43,17 @@ export async function POST(request: NextRequest) {
     }
 
     const currentStock = await redis.get(stockKey);
-    console.log('📊 Current Redis stock:', currentStock);
+    console.log('Current Redis stock:', currentStock);
 
     const result = await redis.eval(DECREMENT_STOCK_SCRIPT, {
       keys: [stockKey],
       arguments: [quantity.toString()],
     });
 
-    console.log('🔧 Redis decrement result:', result);
+    console.log('Redis decrement result:', result);
 
     if (result === -1) {
-      console.log('⚠️ Stock not in cache, syncing...');
+      console.log('Stock not in cache, syncing...');
       await redis.set(stockKey, product.stock.toString());
       return NextResponse.json(
         { success: false, message: 'Please retry' },
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (result === -2 || (typeof result === 'number' && result < 0)) {
-      console.log('❌ Out of stock');
+      console.log('Out of stock');
       return NextResponse.json(
         { success: false, message: 'Out of stock' },
         { status: 409 }
@@ -72,23 +72,23 @@ export async function POST(request: NextRequest) {
     // Update database without transaction
     try {
       const updateResult = await db.collection('products').findOneAndUpdate(
-        { 
+        {
           _id: new ObjectId(productId),
           stock: { $gte: quantity }
         },
-        { 
+        {
           $inc: { stock: -quantity },
           $set: { updatedAt: new Date() }
         },
         { returnDocument: 'after' }
       );
 
-      console.log('💾 Database update:', updateResult ? 'success' : 'failed');
+      console.log('Database update:', updateResult ? 'success' : 'failed');
 
       if (!updateResult) {
         // Rollback Redis
         await redis.incr(stockKey);
-        console.log('🔄 Rolled back Redis stock');
+        console.log('Rolled back Redis stock');
         return NextResponse.json(
           { success: false, message: 'Out of stock' },
           { status: 409 }
@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
       };
 
       await db.collection('orders').insertOne(order);
-      console.log('✅ Order created');
+      console.log('Order created');
 
       const remainingStock = await redis.get(stockKey);
 
@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
     } catch (error) {
       // Rollback Redis on any error
       await redis.incr(stockKey);
-      console.error('❌ Purchase failed:', error);
+      console.error('Purchase failed:', error);
       return NextResponse.json(
         { success: false, message: 'Purchase failed, please try again' },
         { status: 500 }
@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
     }
 
   } catch (error) {
-    console.error('💥 Purchase error:', error);
+    console.error('Purchase error:', error);
     return NextResponse.json(
       { success: false, message: 'Internal server error' },
       { status: 500 }

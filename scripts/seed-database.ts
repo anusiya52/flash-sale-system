@@ -5,7 +5,7 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/flashs
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 
 async function seed() {
-  console.log('🌱 Seeding database...');
+  console.log('Seeding database...');
 
   const mongoClient = await MongoClient.connect(MONGODB_URI);
   const db = mongoClient.db();
@@ -56,9 +56,9 @@ async function seed() {
     await redis.set(`stock:${product._id}`, product.stock.toString());
   }
 
-  console.log('✅ Database seeded successfully');
-  console.log(`📦 Created ${products.length} products`);
-  console.log('🎯 Test product ID for stress test: 676f00000000000000000001');
+  console.log('Database seeded successfully');
+  console.log(`Created ${products.length} products`);
+  console.log('Test product ID for stress test: 676f00000000000000000001');
 
   await mongoClient.close();
   await redis.quit();
